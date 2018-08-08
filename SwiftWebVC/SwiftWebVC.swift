@@ -78,6 +78,15 @@ public class SwiftWebVC: UIViewController {
     var navBarTitle: UILabel!
     
     var sharingEnabled = true
+  
+    /// 分享源 如果默认情况下为当前页面
+    var sharingUrl: String?
+  
+    //// 分享的图标
+    var sharingUrlIcon: UIImage?
+  
+    /// 网页标题， 默认的情况下为网页自动标题
+    var webTitle: String?
     
     ////////////////////////////////////////////////
     
@@ -88,20 +97,38 @@ public class SwiftWebVC: UIViewController {
         webView.navigationDelegate = nil;
     }
     
-    public convenience init(urlString: String, sharingEnabled: Bool = true) {
+    public convenience init(urlString: String,
+                            sharingEnabled: Bool = true,
+                            sharingUrl: String? = nil,
+                            sharingUrlIcon: UIImage? = nil,
+                            title: String? = nil) {
         var urlString = urlString
         if !urlString.hasPrefix("https://") && !urlString.hasPrefix("http://") {
             urlString = "https://"+urlString
         }
-        self.init(pageURL: URL(string: urlString)!, sharingEnabled: sharingEnabled)
+      self.init(pageURL: URL(string: urlString)!, sharingEnabled: sharingEnabled, sharingUrl: sharingUrl, sharingUrlIcon: sharingUrlIcon, title: title)
     }
     
-    public convenience init(pageURL: URL, sharingEnabled: Bool = true) {
-        self.init(aRequest: URLRequest(url: pageURL), sharingEnabled: sharingEnabled)
+  public convenience init(pageURL: URL,
+                          sharingEnabled: Bool = true,
+                          sharingUrl: String? = nil,
+                          sharingUrlIcon: UIImage? = nil,
+                          title: String? = nil) {
+        self.init(aRequest: URLRequest(url: pageURL), sharingEnabled: sharingEnabled, sharingUrl: sharingUrl, sharingUrlIcon: sharingUrlIcon, title: title)
     }
     
-    public convenience init(aRequest: URLRequest, sharingEnabled: Bool = true) {
+    /// 初始化网页
+    ///
+    /// - Parameters:
+    ///   - aRequest: 当前请求
+    ///   - sharingEnabled: 是否开启分享
+    ///   - sharingUrl: 自定义的分享，要是不传就是当前网页的网址
+    ///   - title: 当前网页的标题
+    public convenience init(aRequest: URLRequest, sharingEnabled: Bool = true, sharingUrl: String? = nil, sharingUrlIcon: UIImage? = nil, title: String? = nil) {
         self.init()
+        self.webTitle = title;
+        self.sharingUrl = sharingUrl
+      self.sharingUrlIcon = sharingUrlIcon
         self.sharingEnabled = sharingEnabled
         self.request = aRequest
     }
@@ -127,6 +154,9 @@ public class SwiftWebVC: UIViewController {
         
         updateToolbarItems()
         navBarTitle = UILabel()
+      if let titleTmp = self.webTitle {
+        navBarTitle.text = titleTmp
+      }
         navBarTitle.backgroundColor = UIColor.clear
         if presentingViewController == nil {
             if let titleAttributes = navigationController!.navigationBar.titleTextAttributes {
@@ -139,8 +169,11 @@ public class SwiftWebVC: UIViewController {
         navBarTitle.shadowOffset = CGSize(width: 0, height: 1);
         navBarTitle.font = UIFont(name: "HelveticaNeue-Medium", size: 17.0)
         navBarTitle.textAlignment = .center
+      navBarTitle.sizeToFit()
+
         navigationItem.titleView = navBarTitle;
-        
+      
+      
         super.viewWillAppear(true)
         
         if (UIDevice.current.userInterfaceIdiom == UIUserInterfaceIdiom.phone) {
@@ -235,8 +268,7 @@ public class SwiftWebVC: UIViewController {
     }
     
     @objc func actionButtonTapped(_ sender: AnyObject) {
-        
-        if let url: URL = ((webView.url != nil) ? webView.url : request.url) {
+      if let url: URL = (sharingUrl != nil) ? URL(string: sharingUrl!) : ((webView.url != nil) ? webView.url : request.url) {
             let activities: NSArray = [SwiftWebVCActivitySafari(), SwiftWebVCActivityChrome()]
             
             if url.absoluteString.hasPrefix("file:///") {
@@ -244,7 +276,20 @@ public class SwiftWebVC: UIViewController {
                 dc.presentOptionsMenu(from: view.bounds, in: view, animated: true)
             }
             else {
-                let activityController: UIActivityViewController = UIActivityViewController(activityItems: [url], applicationActivities: activities as? [UIActivity])
+              
+              var items: [Any] = [];
+              
+              if let titleTmp = navBarTitle.text {
+                items.append(titleTmp)
+              }
+              
+              if let icon = sharingUrlIcon {
+                items.append(icon)
+              }
+              
+              items.append(url)
+              
+                let activityController: UIActivityViewController = UIActivityViewController(activityItems: items, applicationActivities: activities as? [UIActivity])
                 
                 if floor(NSFoundationVersionNumber) > NSFoundationVersionNumber_iOS_7_1 && UIDevice.current.userInterfaceIdiom == UIUserInterfaceIdiom.pad {
                     let ctrl: UIPopoverPresentationController = activityController.popoverPresentationController!
@@ -299,8 +344,10 @@ extension SwiftWebVC: WKNavigationDelegate {
         UIApplication.shared.isNetworkActivityIndicatorVisible = false
         
         webView.evaluateJavaScript("document.title", completionHandler: {(response, error) in
+          if self.webTitle == nil {
             self.navBarTitle.text = response as! String?
             self.navBarTitle.sizeToFit()
+          }
             self.updateToolbarItems()
         })
         
