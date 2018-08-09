@@ -147,6 +147,7 @@ public class SwiftWebVC: UIViewController {
     
     override public func viewDidLoad() {
         super.viewDidLoad()
+      self.hidesBottomBarWhenPushed = true
     }
     
     override public func viewWillAppear(_ animated: Bool) {
