@@ -305,10 +305,12 @@ public class SwiftWebVC: UIViewController {
     
     ////////////////////////////////////////////////
     
-    @objc func doneButtonTapped() {
-        closing = true
-        UINavigationBar.appearance().barStyle = storedStatusColor!
-        self.dismiss(animated: true, completion: nil)
+    @objc public func doneButtonTapped() {
+      closing = true
+      if let currentStoredStatusColor = storedStatusColor {
+        UINavigationBar.appearance().barStyle = currentStoredStatusColor
+      }
+      self.dismiss(animated: true, completion: nil)
     }
 
     // MARK: - Class Methods
