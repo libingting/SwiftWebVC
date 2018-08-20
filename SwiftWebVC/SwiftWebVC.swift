@@ -7,6 +7,9 @@
 //
 
 import WebKit
+import MonkeyKing
+import MBUIKit
+import MBCoreKit
 
 public protocol SwiftWebVCDelegate: class {
     func didStartLoading()
@@ -20,6 +23,10 @@ public class SwiftWebVC: UIViewController {
     var buttonColor: UIColor? = nil
     var titleColor: UIColor? = nil
     var closing: Bool! = false
+    /// 启用简洁后就不显示下面的bar
+    var concise: Bool = false
+    /// 确认是否可以启用分享
+    public var shareActionCheckHandler:((_ index: SwiftWebShareAction) -> Bool)?
     
     lazy var backBarButtonItem: UIBarButtonItem =  {
         var tempBackBarButtonItem = UIBarButtonItem(image: SwiftWebVC.bundledImage(named: "SwiftWebVCBack"),
@@ -101,20 +108,22 @@ public class SwiftWebVC: UIViewController {
                             sharingEnabled: Bool = true,
                             sharingUrl: String? = nil,
                             sharingUrlIcon: UIImage? = nil,
-                            title: String? = nil) {
+                            title: String? = nil,
+                            concise: Bool? = nil) {
         var urlString = urlString
         if !urlString.hasPrefix("https://") && !urlString.hasPrefix("http://") {
             urlString = "https://"+urlString
         }
-      self.init(pageURL: URL(string: urlString)!, sharingEnabled: sharingEnabled, sharingUrl: sharingUrl, sharingUrlIcon: sharingUrlIcon, title: title)
+      self.init(pageURL: URL(string: urlString)!, sharingEnabled: sharingEnabled, sharingUrl: sharingUrl, sharingUrlIcon: sharingUrlIcon, title: title, concise: concise)
     }
     
   public convenience init(pageURL: URL,
                           sharingEnabled: Bool = true,
                           sharingUrl: String? = nil,
                           sharingUrlIcon: UIImage? = nil,
-                          title: String? = nil) {
-        self.init(aRequest: URLRequest(url: pageURL), sharingEnabled: sharingEnabled, sharingUrl: sharingUrl, sharingUrlIcon: sharingUrlIcon, title: title)
+                          title: String? = nil,
+                          concise: Bool? = nil) {
+        self.init(aRequest: URLRequest(url: pageURL), sharingEnabled: sharingEnabled, sharingUrl: sharingUrl, sharingUrlIcon: sharingUrlIcon, title: title, concise: concise)
     }
     
     /// 初始化网页
@@ -124,13 +133,17 @@ public class SwiftWebVC: UIViewController {
     ///   - sharingEnabled: 是否开启分享
     ///   - sharingUrl: 自定义的分享，要是不传就是当前网页的网址
     ///   - title: 当前网页的标题
-    public convenience init(aRequest: URLRequest, sharingEnabled: Bool = true, sharingUrl: String? = nil, sharingUrlIcon: UIImage? = nil, title: String? = nil) {
+  public convenience init(aRequest: URLRequest, sharingEnabled: Bool = true, sharingUrl: String? = nil, sharingUrlIcon: UIImage? = nil, title: String? = nil,
+                          concise: Bool? = nil) {
         self.init()
         self.webTitle = title;
         self.sharingUrl = sharingUrl
       self.sharingUrlIcon = sharingUrlIcon
         self.sharingEnabled = sharingEnabled
         self.request = aRequest
+    if let conciseTmp = concise {
+      self.concise = conciseTmp
+    }
     }
     
     func loadRequest(_ request: URLRequest) {
@@ -152,12 +165,12 @@ public class SwiftWebVC: UIViewController {
     
     override public func viewWillAppear(_ animated: Bool) {
         assert(self.navigationController != nil, "SVWebViewController needs to be contained in a UINavigationController. If you are presenting SVWebViewController modally, use SVModalWebViewController instead.")
-        
         updateToolbarItems()
+      
         navBarTitle = UILabel()
-      if let titleTmp = self.webTitle {
-        navBarTitle.text = titleTmp
-      }
+        if let titleTmp = self.webTitle {
+          navBarTitle.text = titleTmp
+        }
         navBarTitle.backgroundColor = UIColor.clear
         if presentingViewController == nil {
             if let titleAttributes = navigationController!.navigationBar.titleTextAttributes {
@@ -176,7 +189,7 @@ public class SwiftWebVC: UIViewController {
       
       
         super.viewWillAppear(true)
-        
+      guard !concise else { return }
         if (UIDevice.current.userInterfaceIdiom == UIUserInterfaceIdiom.phone) {
             self.navigationController?.setToolbarHidden(false, animated: false)
         }
@@ -187,7 +200,8 @@ public class SwiftWebVC: UIViewController {
     
     override public func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(true)
-        
+      
+        guard !concise else { return }
         if (UIDevice.current.userInterfaceIdiom == UIUserInterfaceIdiom.phone) {
             self.navigationController?.setToolbarHidden(true, animated: true)
         }
@@ -202,6 +216,11 @@ public class SwiftWebVC: UIViewController {
     // Toolbar
     
     func updateToolbarItems() {
+      guard !concise else {
+        self.navigationItem.rightBarButtonItem = UIBarButtonItem(image: SwiftWebVC.bundledImage(named: "SwiftWebVCMore"), style: UIBarButtonItemStyle.done, target: self, action: #selector(moreAction))
+        return
+      }
+      
         backBarButtonItem.isEnabled = webView.canGoBack
         forwardBarButtonItem.isEnabled = webView.canGoForward
         
@@ -325,7 +344,44 @@ public class SwiftWebVC: UIViewController {
         } // Replace MyBasePodClass with yours
         return image
     }
-    
+  
+  
+    @objc func moreAction() {
+      SwiftWebShareView.show(At: view).delegate = self
+    }
+}
+
+extension SwiftWebVC: SwiftWebShareViewDelegate {
+  func swiftWebShareViewAction(index: SwiftWebShareAction) -> Bool {
+    let allow = shareActionCheckHandler?(index) ?? true
+    if allow {
+      if let url: URL = (sharingUrl != nil) ? URL(string: sharingUrl!) : ((webView.url != nil) ? webView.url : request.url) {
+        
+        var info: MonkeyKing.Info = (title: navBarTitle.text ?? "", description: nil, thumbnail: sharingUrlIcon, media: MonkeyKing.Media.url(url))
+        
+        var msg: MonkeyKing.Message? = nil
+        switch index {
+        case .weChat:
+          msg = MonkeyKing.Message.weChat(MonkeyKing.Message.WeChatSubtype.session(info: info))
+        case .friends:
+          msg = MonkeyKing.Message.weChat(MonkeyKing.Message.WeChatSubtype.timeline(info: info))
+        }
+        
+        if let msgTmp = msg {
+          MonkeyKing.deliver(msgTmp) { (result) in
+            switch result {
+            case .success(_):
+              MBSuccess("分享成功")
+            case .failure(let error):
+              MBError(error.errorDescription ?? "分享失败")
+            }
+          }
+        }
+        
+      }
+    }
+    return allow
+  }
 }
 
 extension SwiftWebVC: WKUIDelegate {
