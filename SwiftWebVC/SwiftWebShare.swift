@@ -27,22 +27,24 @@ class SwiftWebShareView: MBView {
   
   override func setup() {
     super.setup()
-    addSubviews([lbTitle, btnWeChat, btnFriends, cancel])
-    backgroundColor = MBColor(hex: 0xF5F5F6)
+    addSubviews([bgView ,lbTitle, btnWeChat, btnFriends, cancel])
+    backgroundColor = MBColor.clear
   }
   
   override func layoutSubviews() {
     super.layoutSubviews()
     
-    lbTitle.pin.top(14).left().right().height(19)
+    bgView.pin.all()
     
-    let btns: [MBButton] = [btnWeChat, btnFriends]
-    let unitSpace = width / CGFloat(btns.count + 1)
+    lbTitle.pin.top(16).left().right().height(17)
+    
+    let btns: [SwiftWebTopImageButton] = [btnWeChat, btnFriends]
+    let unitSpace: CGFloat = 70.0
     for (index, btn) in btns.enumerated() {
-      btn.pin.below(of: lbTitle).marginTop(25).left(unitSpace + unitSpace * CGFloat(index) - 60)
+      btn.pin.below(of: lbTitle).marginTop(18.0).left(15.0 + unitSpace * CGFloat(index))
     }
 
-    cancel.pin.bottom().left().right().height(36.0 + safeBottom())
+    cancel.pin.bottom().left().right().height(44.0 + safeBottom())
   }
   
   @discardableResult
@@ -61,7 +63,7 @@ class SwiftWebShareView: MBView {
     } else {
       // Fallback on earlier versions
     }
-    let obj = SwiftWebShareView(frame: CGRectMake(0, 0, At.width, 183.0 + bottomValue))
+    let obj = SwiftWebShareView(frame: CGRectMake(0, 0, At.width, 191.0 + bottomValue))
     obj.y = At.height
     At.addSubviews([obj])
     UIView.animate(withDuration: 0.3) {
@@ -85,27 +87,27 @@ class SwiftWebShareView: MBView {
   }
   
   // MARK: - getter
-  lazy var btnWeChat: MBButton = {
-    let obj = MBButton(type: UIButtonType.custom)
+  lazy var btnWeChat: SwiftWebTopImageButton = {
+    let obj = SwiftWebTopImageButton(type: UIButtonType.custom)
     obj.image = SwiftWebVC.bundledImage(named: "SwiftWebVCWeixin")
     obj.title = "微信"
-    obj.titleFont = UIFont.systemFont(ofSize: 11)
-    obj.titleColor = UIColor.black
-    obj.size = CGSizeMake(120, 70)
-    obj.setImageAlignmentToTop(titleSpace: 4)
+    obj.lbTitle.font = UIFont.systemFont(ofSize: 11)
+    obj.lbTitle.textColor = MBColor(hex: 0x757475)
+    obj.titleSpace = 7
+    obj.size = CGSizeMake(60, 77)
     obj.tag = SwiftWebShareAction.weChat.rawValue
     obj.addTarget(self, action: #selector(tapAction(btn:)))
     return obj
   }()
   
-  lazy var btnFriends: MBButton = {
-    let obj = MBButton(type: UIButtonType.custom)
+  lazy var btnFriends: SwiftWebTopImageButton = {
+    let obj = SwiftWebTopImageButton(type: UIButtonType.custom)
     obj.image = SwiftWebVC.bundledImage(named: "SwiftWebVCFriend")
-     obj.title = "微信朋友圈"
-    obj.titleFont = UIFont.systemFont(ofSize: 11)
-    obj.titleColor = UIColor.black
-    obj.size = CGSizeMake(120, 70)
-    obj.setImageAlignmentToTop(titleSpace: 4)
+    obj.title = "微信朋友圈"
+    obj.lbTitle.font = UIFont.systemFont(ofSize: 11)
+    obj.lbTitle.textColor = MBColor(hex: 0x757475)
+    obj.titleSpace = 7
+    obj.size = CGSizeMake(60, 77)
     obj.tag = SwiftWebShareAction.friends.rawValue
     obj.addTarget(self, action: #selector(tapAction(btn:)))
     return obj
@@ -114,7 +116,8 @@ class SwiftWebShareView: MBView {
   lazy var lbTitle: MBLabel = {
     let obj = MBLabel()
     obj.text = "分享到"
-    obj.font = UIFont.systemFont(ofSize: 13)
+    obj.font = UIFont.systemFont(ofSize: 12)
+    obj.textColor = MBColor(hex: 0x757475)
     obj.textAlignment = .center
     return obj
   }()
@@ -123,8 +126,15 @@ class SwiftWebShareView: MBView {
     let obj = MBButton()
     obj.title = "取消分享"
     obj.titleFont = UIFont.systemFont(ofSize: 13)
-    obj.backgroundColor = UIColor.white
+    obj.titleColor = MBColor(hex: 0x353535)
+    obj.backgroundColor = MBColor(hex: 0xF4F4F6)
     obj.addTarget(self, action: #selector(cancelAction))
+    return obj
+  }()
+  
+  lazy var bgView: UIVisualEffectView = {
+    let eff = UIBlurEffect(style: UIBlurEffectStyle.extraLight)
+    let obj = UIVisualEffectView(effect: eff)
     return obj
   }()
   
