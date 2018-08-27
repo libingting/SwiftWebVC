@@ -347,7 +347,9 @@ public class SwiftWebVC: UIViewController {
   
   
     @objc func moreAction() {
-      SwiftWebShareView.show(At: view).delegate = self
+      if let view = SwiftWebShareView.show() {
+        view.delegate = self
+      }
     }
 }
 

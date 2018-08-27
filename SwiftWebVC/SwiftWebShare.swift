@@ -48,9 +48,10 @@ class SwiftWebShareView: MBView {
   }
   
   @discardableResult
-  class func show(At: UIView) -> SwiftWebShareView {
+  class func show() -> SwiftWebShareView? {
+    guard let window = UIApplication.shared.keyWindow else { return nil }
     
-    for view in At.subviews {
+    for view in window.subviews {
       if let web: SwiftWebShareView = view as? SwiftWebShareView {
         web.cancelAction()
         return web
@@ -59,15 +60,24 @@ class SwiftWebShareView: MBView {
     
     var bottomValue: CGFloat = 0.0
     if #available(iOS 11.0, *) {
-      bottomValue = At.safeAreaInsets.bottom
+      bottomValue = window.safeAreaInsets.bottom
     } else {
       // Fallback on earlier versions
     }
-    let obj = SwiftWebShareView(frame: CGRectMake(0, 0, At.width, 191.0 + bottomValue))
-    obj.y = At.height
-    At.addSubviews([obj])
+    let obj = SwiftWebShareView(frame: CGRectMake(0, 0, window.width, 191.0 + bottomValue))
+    obj.y = window.height
+    
+    let bgView = MBView(frame: window.bounds)
+    bgView.backgroundColor = MBColor(hex: 0x000000, transparency: 0.2)
+    let touchView = MBView(frame: window.bounds)
+    bgView.addSubview(touchView)
+    bgView.addSubview(obj)
+    let tapGes = UITapGestureRecognizer(target: obj, action: #selector(cancelAction))
+    touchView.addGestureRecognizer(tapGes)
+    
+    window.addSubviews([bgView])
     UIView.animate(withDuration: 0.3) {
-      obj.y = At.height - obj.height
+      obj.y = window.height - obj.height
     }
     return obj
   }
@@ -76,7 +86,7 @@ class SwiftWebShareView: MBView {
     UIView.animate(withDuration: 0.3, animations: {
       self.y = self.superview!.height
     }) { (finish) in
-      self.removeFromSuperview()
+      self.superview?.removeFromSuperview()
     }
   }
   
