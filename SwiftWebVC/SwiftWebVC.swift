@@ -71,16 +71,16 @@ public class SwiftWebVC: UIViewController {
     }()
     
     
-    lazy var webView: WKWebView = {
+    public lazy var webView: WKWebView = {
         var tempWebView = WKWebView(frame: UIScreen.main.bounds)
         tempWebView.uiDelegate = self
         tempWebView.navigationDelegate = self
         return tempWebView;
     }()
     
-    var request: URLRequest!
+    public var request: URLRequest!
     
-    var navBarTitle: UILabel!
+    public var navBarTitle: UILabel!
     
     var sharingEnabled = true
   
