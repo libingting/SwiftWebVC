@@ -7,7 +7,6 @@
 //
 
 import WebKit
-import MonkeyKing
 import MBUIKit
 import MBCoreKit
 
