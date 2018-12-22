@@ -24,6 +24,8 @@ public class SwiftWebVC: UIViewController {
   var closing: Bool! = false
   /// 启用简洁后就不显示下面的bar
   var customRightItem: UIBarButtonItem?
+  /// 网址载入
+  public var urlHandler: ((_ url: URL?) -> Bool)? = nil
   
   lazy var backBarButtonItem: UIBarButtonItem =  {
     var tempBackBarButtonItem = UIBarButtonItem(image: SwiftWebVC.bundledImage(named: "SwiftWebVCBack"),
@@ -427,7 +429,7 @@ extension SwiftWebVC: WKNavigationDelegate {
       break
     }
     
-    decisionHandler(.allow)
+    decisionHandler((urlHandler?(url) ?? true) ? .allow : .cancel)
     
   }
   
